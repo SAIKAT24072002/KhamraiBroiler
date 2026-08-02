@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: khamrai-backend
+    env: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: PORT
+        sync: false
+      - key: NODE_ENV
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: INITIAL_ADMIN_MOBILE
+        sync: false
+      - key: INITIAL_ADMIN_NAME
+        sync: false
+      - key: USE_MOCK_OTP
+        sync: false
+      - key: VERCEL_FRONTEND_URL
+        sync: false
