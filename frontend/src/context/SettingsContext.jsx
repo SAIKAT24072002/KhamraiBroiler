@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '../utils/api';
+import api, { resolveImageUrl } from '../utils/api';
 
 const SettingsContext = createContext();
 
@@ -33,7 +33,7 @@ export const SettingsProvider = ({ children }) => {
       
       const faviconLink = document.getElementById('dynamic-favicon');
       if (faviconLink && settings.faviconUrl) {
-        faviconLink.href = settings.faviconUrl;
+        faviconLink.href = resolveImageUrl(settings.faviconUrl);
       }
     }
   }, [settings]);

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
-import api from '../utils/api';
+import api, { resolveImageUrl } from '../utils/api';
 import { FiCalendar, FiClock, FiCreditCard, FiCheckCircle, FiInfo } from 'react-icons/fi';
 
 const Checkout = () => {
@@ -336,7 +336,7 @@ const Checkout = () => {
                   
                   {settings?.upiQrCodeUrl ? (
                     <img
-                      src={settings.upiQrCodeUrl}
+                      src={resolveImageUrl(settings.upiQrCodeUrl)}
                       alt="UPI QR Code"
                       className="h-44 w-44 object-contain mx-auto border border-slate-200 dark:border-slate-800 rounded-xl p-2 bg-white"
                     />

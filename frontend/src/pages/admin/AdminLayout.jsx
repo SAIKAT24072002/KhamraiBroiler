@@ -37,7 +37,7 @@ const AdminLayout = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-200">
+    <div className="h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-200 overflow-hidden">
       
       {/* 1. Mobile Sidebar Hamburger overlay */}
       {sidebarOpen && (
@@ -104,7 +104,7 @@ const AdminLayout = () => {
       </aside>
 
       {/* 3. Main Dashboard Content Frame */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Main Content Header top-bar */}
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 transition-colors">
           <div className="flex items-center gap-3">

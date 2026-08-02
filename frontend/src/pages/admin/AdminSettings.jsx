@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../utils/api';
+import api, { resolveImageUrl } from '../../utils/api';
 import { useSettings } from '../../context/SettingsContext';
 import { FiSave, FiUpload, FiSettings, FiBriefcase, FiDollarSign } from 'react-icons/fi';
 import { TableSkeleton } from '../../components/Skeleton';
@@ -308,7 +308,7 @@ const AdminSettings = () => {
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Business Logo</label>
               <div className="h-32 bg-slate-50 dark:bg-slate-950 rounded-2xl flex items-center justify-center overflow-hidden border p-4">
                 {logoUrl ? (
-                  <img src={logoUrl} alt="Store Logo" className="max-h-24 object-contain" />
+                  <img src={resolveImageUrl(logoUrl)} alt="Store Logo" className="max-h-24 object-contain" />
                 ) : (
                   <span className="text-sm text-slate-400">No custom logo configured.</span>
                 )}
@@ -333,7 +333,7 @@ const AdminSettings = () => {
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Store Favicon</label>
               <div className="h-20 bg-slate-50 dark:bg-slate-950 rounded-2xl flex items-center justify-center overflow-hidden border">
                 {faviconUrl ? (
-                  <img src={faviconUrl} alt="Store Favicon" className="max-h-10 object-contain" />
+                  <img src={resolveImageUrl(faviconUrl)} alt="Store Favicon" className="max-h-10 object-contain" />
                 ) : (
                   <span className="text-xs text-slate-450">Default favicon active.</span>
                 )}
@@ -358,7 +358,7 @@ const AdminSettings = () => {
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">UPI QR Code Image</label>
               <div className="h-40 bg-slate-50 dark:bg-slate-950 rounded-2xl flex items-center justify-center overflow-hidden border p-2">
                 {upiQrCodeUrl ? (
-                  <img src={upiQrCodeUrl} alt="UPI QR Code" className="max-h-36 object-contain" />
+                  <img src={resolveImageUrl(upiQrCodeUrl)} alt="UPI QR Code" className="max-h-36 object-contain" />
                 ) : (
                   <span className="text-xs text-slate-400 text-center">No custom QR. Fallback to standard rendering active.</span>
                 )}

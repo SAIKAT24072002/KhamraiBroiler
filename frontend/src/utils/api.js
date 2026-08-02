@@ -39,5 +39,20 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Resolves image URLs that may be relative (from local disk storage)
+ * to absolute URLs using the backend base URL.
+ * Cloudinary URLs (absolute) pass through unchanged.
+ */
+const backendBaseUrl = baseApiUrl.replace(/\/api\/?$/, '');
+const resolveImageUrl = (url) => {
+  if (!url) return '';
+  // Already an absolute URL (Cloudinary or external)
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  // Relative URL from local disk storage - prepend backend base
+  if (url.startsWith('/uploads/')) return `${backendBaseUrl}${url}`;
+  return url;
+};
+
 export default api;
-export { baseApiUrl };
+export { baseApiUrl, resolveImageUrl };
