@@ -368,11 +368,12 @@ const Checkout = () => {
                   <input
                     id="checkout-phone"
                     type="tel"
+                    required
                     maxLength="10"
                     value={phone}
                     onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
                     placeholder="10-digit mobile number"
-                    disabled={loading}
+                    disabled={loading || !!user} // Disable if logged in to force using account phone
                     className="block w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                   />
                 </div>

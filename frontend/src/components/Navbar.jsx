@@ -116,7 +116,7 @@ const Navbar = () => {
                 className="flex items-center space-x-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-full font-semibold transition-colors shadow-sm"
               >
                 <FiUser className="h-4 w-4" />
-                <span>Account</span>
+                <span>Sign Up / Login</span>
               </Link>
             )}
           </div>
@@ -194,7 +194,7 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
                 className="flex items-center px-3 py-2 text-base font-semibold text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-md"
               >
-                <FiUser className="mr-3" /> Account / Login
+                <FiUser className="mr-3" /> Sign Up / Login
               </Link>
             )}
           </div>
