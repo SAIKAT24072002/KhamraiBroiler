@@ -17,7 +17,7 @@ const OrderStatus = () => {
     const fetchOrder = async () => {
       try {
         setLoading(true);
-        const res = await api.get(`/orders/${id}`);
+        const res = await api.get(`/orders/tracking/${id}`);
         setOrder(res.data);
       } catch (err) {
         setError(err.message);
@@ -61,8 +61,8 @@ const OrderStatus = () => {
         <div className="text-6xl text-red-500 font-sans font-bold">⚠️</div>
         <h2 className="text-xl font-bold uppercase tracking-tight text-slate-800 dark:text-white">Order Not Found</h2>
         <p className="text-xs text-slate-500">{error}</p>
-        <Link to="/profile" className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs uppercase tracking-wider inline-block">
-          Go To Orders
+        <Link to="/shop" className="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs uppercase tracking-wider inline-block">
+          Go To Shop
         </Link>
       </div>
     );
@@ -154,8 +154,8 @@ const OrderStatus = () => {
             <FiUser className="text-primary-600" /> Customer Details
           </h3>
           <div className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
-            <p><strong>Name:</strong> {order.customer?.name}</p>
-            <p><strong>Mobile:</strong> {order.customer?.mobile}</p>
+            <p><strong>Name:</strong> {order.guestInfo?.name || order.customer?.name}</p>
+            <p><strong>Mobile:</strong> {order.guestInfo?.phone || order.customer?.mobile}</p>
             <p><strong>Payment Status:</strong> <span className={`font-bold px-2 py-0.5 rounded text-[10px] uppercase ${
               order.paymentStatus === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
             }`}>{order.paymentStatus}</span></p>

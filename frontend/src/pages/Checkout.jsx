@@ -4,7 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
 import { submitGuestOrder } from '../utils/orderService';
-import { FiUser, FiPhone, FiMapPin, FiCalendar, FiClock, FiCheckCircle, FiArrowLeft, FiShoppingBag } from 'react-icons/fi';
+import api from '../utils/api';
+import { FiUser, FiPhone, FiMapPin, FiCalendar, FiClock, FiCheckCircle, FiArrowLeft, FiShoppingBag, FiCreditCard, FiSmartphone } from 'react-icons/fi';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -20,10 +21,19 @@ const Checkout = () => {
   const [pickupTime, setPickupTime] = useState('');
   const [orderNote, setOrderNote] = useState('');
 
+  // Payment Options (Only Manual UPI or Razorpay)
+  const [paymentMethod, setPaymentMethod] = useState(settings?.enableRazorpay !== false ? 'Automatic Payment (Razorpay)' : 'Manual UPI');
+  const [transactionId, setTransactionId] = useState('');
+
   // UI state
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null); // holds order object on success
+
+  // Razorpay states
+  const [showSandboxModal, setShowSandboxModal] = useState(false);
+  const [simulatedPaymentData, setSimulatedPaymentData] = useState(null);
+  const [createdOrderId, setCreatedOrderId] = useState(null);
 
   const timeSlots = [
     '8:00 AM – 9:00 AM',
@@ -54,6 +64,7 @@ const Checkout = () => {
     if (!pickupDate) { setError('Please select a pickup date.'); return; }
     if (!pickupTime) { setError('Please select a pickup time slot.'); return; }
     if (cartItems.length === 0) { setError('Your cart is empty.'); return; }
+    if (paymentMethod === 'Manual UPI' && !transactionId.trim()) { setError('Please enter the UPI Transaction ID.'); return; }
 
     setLoading(true);
     try {
@@ -63,14 +74,21 @@ const Checkout = () => {
         address: address.trim(),
         items: cartItems.map(i => ({ productId: i.productId, name: i.name, quantity: i.quantity })),
         couponCode: coupon?.code || '',
-        paymentMethod: 'Cash on Pickup',
+        paymentMethod: paymentMethod,
+        transactionId: paymentMethod === 'Manual UPI' ? transactionId.trim() : '',
         pickupDate,
         pickupTime,
         orderNote: orderNote.trim()
       });
 
-      setOrderSuccess(order);
-      clearCart();
+      // Handle Razorpay Payment flow
+      if (paymentMethod === 'Automatic Payment (Razorpay)') {
+        await handleRazorpayCheckout(order, name, digits);
+      } else {
+        // Manual UPI flow success
+        setOrderSuccess(order);
+        clearCart();
+      }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to place order.');
     } finally {
@@ -78,8 +96,86 @@ const Checkout = () => {
     }
   };
 
+  const handleRazorpayCheckout = async (order, customerName, customerPhone) => {
+    try {
+      const res = await api.post('/payments/create-order', { orderId: order._id });
+      const payData = res.data;
+      setCreatedOrderId(order._id);
+      setOrderSuccess(order); // Keep order context for success screen after payment verification
+
+      if (payData.simulated) {
+        // Show simulated sandbox payment modal
+        setSimulatedPaymentData(payData);
+        setShowSandboxModal(true);
+      } else {
+        // Launch standard real Razorpay SDK
+        const options = {
+          key: payData.key,
+          amount: payData.amount,
+          currency: payData.currency,
+          name: settings?.businessName || 'KHAMRAI BROILER CENTER',
+          description: `Payment for Order #${payData.orderNumber}`,
+          order_id: payData.id,
+          handler: async (response) => {
+            try {
+              await api.post('/payments/verify-signature', {
+                orderId: order._id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature
+              });
+              clearCart();
+              // Status screen handled naturally because showSandboxModal is false
+            } catch (err) {
+              setError('Payment verification failed: ' + (err.response?.data?.message || err.message));
+              setOrderSuccess(null); // Fallback to form
+            }
+          },
+          prefill: {
+            name: customerName,
+            contact: customerPhone
+          },
+          theme: {
+            color: '#b91c1c'
+          },
+          modal: {
+            ondismiss: function() {
+              setError('Payment cancelled by user. Order is pending.');
+              setOrderSuccess(null); // Fallback to form
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      }
+    } catch (err) {
+      setError('Payment initialization failed: ' + (err.response?.data?.message || err.message));
+      setOrderSuccess(null); // Fallback to form
+    }
+  };
+
+  const handleSimulatedSuccess = async () => {
+    setShowSandboxModal(false);
+    setLoading(true);
+    try {
+      await api.post('/payments/verify-signature', {
+        orderId: createdOrderId,
+        razorpayPaymentId: `pay_sim_${Date.now()}`,
+        razorpayOrderId: simulatedPaymentData.id,
+        isSimulated: true
+      });
+      clearCart();
+    } catch (err) {
+      setError('Simulated payment verification failed: ' + (err.response?.data?.message || err.message));
+      setOrderSuccess(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ─── Success Screen ────────────────────────────────────────────────────
-  if (orderSuccess) {
+  if (orderSuccess && !showSandboxModal) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 bg-slate-50 dark:bg-slate-950 transition-colors">
         <div className="max-w-md w-full text-center space-y-6 p-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-xl">
@@ -108,20 +204,28 @@ const Checkout = () => {
             </div>
             <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
               <span>Payment</span>
-              <strong className="text-slate-800 dark:text-white">Cash on Pickup</strong>
+              <strong className="text-slate-800 dark:text-white">{orderSuccess.paymentMethod}</strong>
             </div>
           </div>
 
           <p className="text-xs text-slate-400 leading-relaxed">
-            Please visit our shop at the selected time slot. Show your order number at the counter.
+            Please visit our shop at the selected time slot. You can track your order using your Order ID.
           </p>
 
-          <Link
-            to="/shop"
-            className="inline-flex items-center gap-2 bg-primary-700 hover:bg-primary-800 text-white font-bold py-3 px-6 rounded-xl text-sm uppercase tracking-wider shadow-md transition-transform hover:scale-105 active:scale-95"
-          >
-            <FiShoppingBag /> Continue Shopping
-          </Link>
+          <div className="flex flex-col gap-3 mt-4">
+            <Link
+              to={`/order-status/${orderSuccess.orderNumber}`}
+              className="inline-flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl text-sm uppercase tracking-wider shadow-md transition-transform hover:scale-105 active:scale-95"
+            >
+              Track Order Status
+            </Link>
+            <Link
+              to="/shop"
+              className="inline-flex justify-center items-center gap-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold py-3 px-6 rounded-xl text-sm uppercase tracking-wider transition-all"
+            >
+              <FiShoppingBag /> Continue Shopping
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -144,6 +248,39 @@ const Checkout = () => {
   // ─── Checkout Form ────────────────────────────────────────────────────
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 dark:bg-slate-950 transition-colors duration-200">
+      
+      {/* Sandbox Simulated Modal overlay */}
+      {showSandboxModal && simulatedPaymentData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl max-w-sm w-full space-y-6 text-center border border-slate-100 dark:border-slate-800">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Sandbox Test Mode</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Razorpay API keys are not configured. This is a simulated checkout.
+            </p>
+            <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl text-left space-y-2 text-xs">
+              <p><strong>Order Amount:</strong> {currency}{(simulatedPaymentData.amount / 100).toFixed(2)}</p>
+              <p><strong>Test Order ID:</strong> {simulatedPaymentData.id}</p>
+            </div>
+            <button
+              onClick={handleSimulatedSuccess}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-md text-sm uppercase tracking-wider"
+            >
+              Simulate Payment Success
+            </button>
+            <button
+              onClick={() => {
+                setShowSandboxModal(false);
+                setOrderSuccess(null);
+                setLoading(false);
+              }}
+              className="w-full bg-red-100 hover:bg-red-200 text-red-700 font-bold py-3 px-4 rounded-xl text-sm uppercase tracking-wider mt-2"
+            >
+              Cancel Payment
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/cart')} className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors">
@@ -153,7 +290,7 @@ const Checkout = () => {
           <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white uppercase tracking-tight">
             Checkout
           </h1>
-          <p className="text-xs text-slate-400">Fill in your details to place your pickup order</p>
+          <p className="text-xs text-slate-400">Fill in your details and pay to confirm pickup</p>
         </div>
       </div>
 
@@ -282,8 +419,94 @@ const Checkout = () => {
           </div>
         </form>
 
-        {/* ── Right: Order Summary ──────────────────────────── */}
+        {/* ── Right: Order Summary & Payment ──────────────────────────── */}
         <div className="space-y-6">
+          
+          {/* Payment Method Selector */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
+            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <FiCreditCard className="text-primary-600" /> Payment Method
+            </h3>
+            <div className="space-y-3">
+              
+              {/* Razorpay Option */}
+              {settings?.enableRazorpay !== false && (
+                <label className={`flex items-center p-3 border rounded-xl cursor-pointer transition-all ${
+                  paymentMethod === 'Automatic Payment (Razorpay)' 
+                  ? 'border-primary-600 bg-primary-50/50 dark:bg-primary-900/20' 
+                  : 'border-slate-200 dark:border-slate-700'
+                }`}>
+                  <input
+                    type="radio"
+                    name="payment_method"
+                    value="Automatic Payment (Razorpay)"
+                    checked={paymentMethod === 'Automatic Payment (Razorpay)'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                  />
+                  <span className="ml-3 text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Online Payment (Cards / UPI)
+                  </span>
+                </label>
+              )}
+
+              {/* Manual UPI Option */}
+              {settings?.enableManualUpi !== false && (
+                <div className={`border rounded-xl transition-all overflow-hidden ${
+                  paymentMethod === 'Manual UPI' 
+                  ? 'border-primary-600 bg-primary-50/50 dark:bg-primary-900/20' 
+                  : 'border-slate-200 dark:border-slate-700'
+                }`}>
+                  <label className="flex items-center p-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      value="Manual UPI"
+                      checked={paymentMethod === 'Manual UPI'}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                    />
+                    <span className="ml-3 text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Scanner / Manual UPI
+                    </span>
+                  </label>
+                  
+                  {/* Manual UPI QR and Input Section */}
+                  {paymentMethod === 'Manual UPI' && (
+                    <div className="p-4 pt-0 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                      {settings?.upiId && (
+                        <div className="bg-white dark:bg-slate-800 p-3 rounded-lg text-center shadow-sm border border-slate-100 dark:border-slate-700">
+                          <p className="text-[10px] text-slate-500 font-bold mb-2">SCAN & PAY</p>
+                          <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.businessName || 'Business')}&am=${total.toFixed(2)}&cu=INR`} 
+                            alt="UPI QR Code" 
+                            className="mx-auto rounded"
+                          />
+                          <p className="text-[10px] font-mono select-all mt-2 bg-slate-50 dark:bg-slate-900 p-1 border dark:border-slate-700 rounded">{settings.upiId}</p>
+                        </div>
+                      )}
+                      
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                          <FiSmartphone /> Transaction ID / UTR *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={transactionId}
+                          onChange={(e) => setTransactionId(e.target.value)}
+                          placeholder="e.g. 3209123485"
+                          className="block w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none focus:border-primary-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+
           <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-5">
             <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
               <FiShoppingBag className="text-primary-600" /> Order Summary
@@ -324,13 +547,6 @@ const Checkout = () => {
               </div>
             </div>
 
-            {/* Payment badge */}
-            <div className="bg-accent-50 dark:bg-accent-950/20 border border-accent-100 dark:border-accent-900/40 rounded-xl p-3 text-center">
-              <p className="text-[10px] font-bold text-accent-800 dark:text-accent-300 uppercase tracking-wider">
-                💵 Payment: Cash on Pickup
-              </p>
-            </div>
-
             {/* Submit button */}
             <button
               type="submit"
@@ -341,11 +557,11 @@ const Checkout = () => {
               {loading ? (
                 <>
                   <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                  Placing Order…
+                  Processing…
                 </>
               ) : (
                 <>
-                  <FiCheckCircle /> Confirm & Place Order
+                  <FiCheckCircle /> Pay & Place Order
                 </>
               )}
             </button>

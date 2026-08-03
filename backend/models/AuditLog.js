@@ -8,7 +8,7 @@ const AuditLogSchema = new mongoose.Schema({
   performedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    default: null
   },
   details: {
     type: String,

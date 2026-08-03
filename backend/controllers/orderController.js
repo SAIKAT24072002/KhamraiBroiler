@@ -661,6 +661,26 @@ const createGuestOrder = async (req, res, next) => {
   }
 };
 
+/**
+ * Get order by Order Number (Public endpoint for guest tracking)
+ * Endpoint: GET /api/orders/tracking/:orderNumber
+ */
+const getGuestOrder = async (req, res, next) => {
+  try {
+    const orderNumber = req.params.orderNumber.toUpperCase();
+    const order = await Order.findOne({ orderNumber }).populate('customer', 'name mobile');
+    
+    if (!order) {
+      res.status(404);
+      throw new Error('Order not found with the provided Order Number.');
+    }
+    
+    res.json(order);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
   createGuestOrder,
@@ -669,5 +689,6 @@ module.exports = {
   getAllOrders,
   updateOrderStatus,
   updatePaymentStatus,
-  printInvoice
+  printInvoice,
+  getGuestOrder
 };

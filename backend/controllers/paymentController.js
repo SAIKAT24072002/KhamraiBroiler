@@ -110,7 +110,7 @@ const verifyPaymentSignature = async (req, res, next) => {
 
       await AuditLog.create({
         action: 'PAYMENT_VERIFIED',
-        performedBy: req.user._id,
+        performedBy: null,
         details: `Simulated Sandbox Payment verified for order ${order.orderNumber}`,
         targetId: order._id,
         targetModel: 'Order'
@@ -136,7 +136,7 @@ const verifyPaymentSignature = async (req, res, next) => {
 
       await AuditLog.create({
         action: 'PAYMENT_VERIFIED',
-        performedBy: req.user._id,
+        performedBy: null,
         details: `Razorpay Payment verified for order ${order.orderNumber}. Payment ID: ${razorpayPaymentId}`,
         targetId: order._id,
         targetModel: 'Order'
