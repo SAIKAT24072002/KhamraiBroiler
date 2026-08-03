@@ -33,11 +33,7 @@ api.interceptors.response.use(
   (error) => {
     const message = error.response?.data?.message || 'Something went wrong. Please check your connection.';
     
-    // Auto logout on unauthorized error
-    if (error.response?.status === 401 && localStorage.getItem('kbc_token')) {
-      localStorage.removeItem('kbc_token');
-      window.location.href = '/login?expired=true';
-    }
+    // Auth has been removed, so we do not redirect to /login on 401
 
     return Promise.reject(new Error(message));
   }
