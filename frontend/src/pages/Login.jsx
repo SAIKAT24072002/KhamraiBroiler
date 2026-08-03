@@ -98,6 +98,7 @@ const Login = () => {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+      <div id="recaptcha-container"></div>
       <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-xl">
         <div className="text-center">
           <h2 className="text-3xl font-extrabold text-slate-800 dark:text-white uppercase tracking-tight">

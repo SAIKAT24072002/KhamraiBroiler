@@ -59,7 +59,7 @@ const Shop = () => {
   const currency = settings?.currency || '₹';
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 dark:bg-slate-950 transition-colors duration-200">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 overflow-y-auto dark:bg-slate-950 transition-colors duration-200">
       
       {/* Page Header */}
       <div className="space-y-2">
@@ -126,7 +126,7 @@ const Shop = () => {
               className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-4 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col justify-between hover:-translate-y-1"
             >
               <div onClick={() => setSelectedProduct(p)} className="cursor-pointer space-y-4">
-                <div className="h-44 bg-slate-50 dark:bg-slate-950/40 rounded-2xl flex items-center justify-center overflow-hidden relative">
+                <div className="h-36 md:h-44 bg-slate-50 dark:bg-slate-950/40 rounded-2xl flex items-center justify-center overflow-hidden relative">
                   {p.images?.[0] ? (
                     <img
                       src={p.images[0]}

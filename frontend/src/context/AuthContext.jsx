@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../utils/api';
+import { firebaseAuth, setupRecaptcha } from '../firebase';
+import { signInWithPhoneNumber } from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -32,8 +34,15 @@ export const AuthProvider = ({ children }) => {
 
   const sendOtp = async (mobile) => {
     try {
-      const res = await api.post('/auth/send-otp', { mobile });
-      return res.data;
+      // Ensure reCAPTCHA is ready
+      const verifier = setupRecaptcha();
+      // Firebase expects phone number with country code, e.g., +91XXXXXXXXXX
+      const formattedMobile = mobile.startsWith('+') ? mobile : `+91${mobile}`;
+      // Initiate sign-in with phone number
+      const confirmationResult = await signInWithPhoneNumber(firebaseAuth, formattedMobile, verifier);
+      // Store globally for later verification
+      window.confirmationResult = confirmationResult;
+      return { message: 'OTP sent via Firebase' };
     } catch (err) {
       throw new Error(err.message);
     }
@@ -41,15 +50,34 @@ export const AuthProvider = ({ children }) => {
 
   const verifyOtp = async (mobile, otp, name = '', email = '') => {
     try {
-      const res = await api.post('/auth/verify-otp', { mobile, otp, name, email });
-      const { token: jwtToken, user: userData } = res.data;
+      if (!window.confirmationResult) {
+        throw new Error('OTP not requested. Please request OTP first.');
+      }
+      // Confirm the OTP with Firebase
+      const userCredential = await window.confirmationResult.confirm(otp);
+      const user = userCredential.user;
       
-      localStorage.setItem('kbc_token', jwtToken);
-      setToken(jwtToken);
+      // Retrieve Firebase ID token
+      const idToken = await user.getIdToken();
+      
+      // Send Firebase token and user details to our backend to sync and get backend JWT
+      const res = await api.post('/auth/verify-otp', {
+        idToken,
+        mobile,
+        name,
+        email
+      });
+      
+      const { token: backendToken, user: userData } = res.data;
+      
+      // Store our backend JWT locally for authenticated requests
+      localStorage.setItem('kbc_token', backendToken);
+      setToken(backendToken);
       setUser(userData);
+      
       return res.data;
     } catch (err) {
-      throw new Error(err.message);
+      throw new Error(err.response?.data?.message || err.message);
     }
   };
 

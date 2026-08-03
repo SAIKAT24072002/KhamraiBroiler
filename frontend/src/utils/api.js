@@ -1,4 +1,8 @@
-const baseApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
+let baseApiUrl = import.meta.env.VITE_API_URL || `${window.location.origin}/api`;
+// Dynamically replace localhost with the actual IP if accessed from a mobile phone on LAN
+if (baseApiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
+  baseApiUrl = baseApiUrl.replace('localhost', window.location.hostname);
+}
 import axios from 'axios';
 
 const api = axios.create({

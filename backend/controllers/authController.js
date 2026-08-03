@@ -46,18 +46,31 @@ const requestOtp = async (req, res, next) => {
  */
 const verifyOtpAndLogin = async (req, res, next) => {
   try {
-    const { mobile, otp, name, email } = req.body;
+    // We now receive idToken from Firebase along with user info
+    const { idToken, mobile, name, email } = req.body;
     
-    if (!mobile || !otp) {
+    if (!idToken || !mobile) {
       res.status(400);
-      throw new Error('Mobile number and OTP are required.');
+      throw new Error('Firebase ID Token and mobile number are required.');
     }
 
-    // Verify OTP
-    const verification = otpService.verifyOTP(mobile, otp);
-    if (!verification.success) {
+    // Verify Firebase ID Token using Google Identity Toolkit REST API
+    const apiKey = process.env.VITE_FIREBASE_API_KEY;
+    if (!apiKey) {
+      res.status(500);
+      throw new Error('Server configuration error: Firebase API Key missing');
+    }
+
+    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken })
+    });
+
+    const data = await response.json();
+    if (data.error) {
       res.status(400);
-      throw new Error(verification.message);
+      throw new Error('Invalid or expired Firebase token');
     }
 
     // Normalize mobile: strip spaces, +91, 91 prefix for consistent DB lookup
@@ -81,7 +94,7 @@ const verifyOtpAndLogin = async (req, res, next) => {
       });
     }
 
-    // Generate JWT
+    // Generate our backend JWT for consistent authorization
     const token = generateToken(user._id);
 
     res.status(200).json({
