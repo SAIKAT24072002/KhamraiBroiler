@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { useAuth } from '../context/AuthContext';
+
 import { useSettings } from '../context/SettingsContext';
-import { FiTrash2, FiPlus, FiMinus, FiArrowRight, FiPercent, FiGift } from 'react-icons/fi';
+import { FiTrash2, FiPlus, FiMinus, FiArrowRight, FiPercent } from 'react-icons/fi';
 
 const Cart = () => {
   const {
@@ -13,7 +13,7 @@ const Cart = () => {
     applyCoupon, removeCoupon, updateQuantity, removeFromCart
   } = useCart();
   
-  const { user } = useAuth();
+
   const { settings } = useSettings();
   const navigate = useNavigate();
 
@@ -36,11 +36,7 @@ const Cart = () => {
 
   const handleProceed = () => {
     if (cartItems.length === 0) return;
-    if (!user) {
-      navigate('/login?redirect=/checkout');
-    } else {
-      navigate('/checkout');
-    }
+    navigate('/checkout');
   };
 
   const currency = settings?.currency || '₹';
@@ -214,33 +210,7 @@ const Cart = () => {
               {couponError && <p className="text-[10px] text-red-500 font-bold">{couponError}</p>}
             </div>
 
-            {/* 2. Loyalty Points Section */}
-            {user && user.loyaltyPoints > 0 && (
-              <div className="space-y-3 border-t border-slate-100 dark:border-slate-800 pt-5">
-                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <FiGift className="text-primary-600" /> Loyalty Points
-                </h3>
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 p-4 rounded-xl space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-600 dark:text-slate-400">Available Points:</span>
-                    <strong className="text-blue-700 dark:text-blue-400">{user.loyaltyPoints} Points</strong>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-600 dark:text-slate-400">Redeem Value:</span>
-                    <strong className="text-blue-700 dark:text-blue-400">{currency}{(user.loyaltyPoints * loyaltyValue).toFixed(2)}</strong>
-                  </div>
-                  <label className="flex items-center gap-2 pt-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={useLoyaltyPoints}
-                      onChange={(e) => setUseLoyaltyPoints(e.target.checked)}
-                      className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 h-4 w-4"
-                    />
-                    Redeem points for this order
-                  </label>
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* Checkout totals Summary card */}

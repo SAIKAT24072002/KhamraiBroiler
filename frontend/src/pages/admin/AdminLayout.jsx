@@ -1,24 +1,17 @@
 import React, { useState } from 'react';
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { Link, NavLink, Outlet } from 'react-router-dom';
+
 import { useSettings } from '../../context/SettingsContext';
 import {
   FiLayout, FiDollarSign, FiPackage, FiGrid, FiDatabase,
   FiShoppingBag, FiInbox, FiPercent, FiImage, FiStar,
-  FiSettings, FiUsers, FiClipboard, FiMenu, FiX, FiLogOut, FiHome
+  FiSettings, FiUsers, FiClipboard, FiMenu, FiX, FiHome
 } from 'react-icons/fi';
 import Logo from '../../components/Logo';
 
 const AdminLayout = () => {
-  const { logout, user } = useAuth();
   const { settings } = useSettings();
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
 
   const menuItems = [
     { name: 'Dashboard', path: '/admin', icon: <FiLayout /> },
@@ -93,13 +86,6 @@ const AdminLayout = () => {
           >
             <FiHome className="text-base" /> Back to Store
           </Link>
-          
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-red-400 hover:text-red-300 transition-colors"
-          >
-            <FiLogOut className="text-base" /> Logout
-          </button>
         </div>
       </aside>
 
@@ -121,14 +107,14 @@ const AdminLayout = () => {
             </span>
           </div>
 
-          {/* Logged in Administrator tag details */}
+          {/* Administrator tag */}
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-xs font-bold text-slate-800 dark:text-white">{user?.name}</p>
-              <p className="text-[10px] text-primary-600 dark:text-primary-400 font-bold uppercase tracking-wider">{user?.role} Access</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-white">Admin</p>
+              <p className="text-[10px] text-primary-600 dark:text-primary-400 font-bold uppercase tracking-wider">Full Access</p>
             </div>
             <div className="h-9 w-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 border">
-              {user?.name.charAt(0).toUpperCase()}
+              A
             </div>
           </div>
         </header>

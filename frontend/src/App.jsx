@@ -1,10 +1,9 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Context Providers
 import { ThemeProvider } from './context/ThemeContext';
 import { SettingsProvider } from './context/SettingsContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
 // Customer layout components
@@ -22,8 +21,6 @@ import Contact from './pages/Contact';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderStatus from './pages/OrderStatus';
-import Profile from './pages/Profile';
-import Login from './pages/Login';
 
 // Admin Pages
 import AdminLayout from './pages/admin/AdminLayout';
@@ -56,73 +53,45 @@ const CustomerLayout = ({ children }) => {
   );
 };
 
-// Admin Protection Route Wrapper
-const AdminProtectedRoute = ({ children }) => {
-  const { user, loading, hasRole } = useAuth();
-  const location = useLocation();
-
-  if (loading) return <div className="h-screen flex items-center justify-center font-bold text-lg">Verifying credentials...</div>;
-
-  const isStaff = hasRole(['admin', 'manager', 'sales', 'inventory']);
-  if (!user || !isStaff) {
-    return <Navigate to={`/login?redirect=${location.pathname}`} replace />;
-  }
-
-  return children;
-};
-
 function App() {
   return (
     <ThemeProvider>
       <SettingsProvider>
-        <AuthProvider>
-          <CartProvider>
-            <Router>
-              <Routes>
-                
-                {/* 1. Customer Storefront Routes */}
-                <Route path="/" element={<CustomerLayout><Home /></CustomerLayout>} />
-                <Route path="/shop" element={<CustomerLayout><Shop /></CustomerLayout>} />
-                <Route path="/wholesale" element={<CustomerLayout><Wholesale /></CustomerLayout>} />
-                <Route path="/offers" element={<CustomerLayout><Offers /></CustomerLayout>} />
-                <Route path="/contact" element={<CustomerLayout><Contact /></CustomerLayout>} />
-                <Route path="/cart" element={<CustomerLayout><Cart /></CustomerLayout>} />
-                <Route path="/checkout" element={<CustomerLayout><Checkout /></CustomerLayout>} />
-                <Route path="/order-status/:id" element={<CustomerLayout><OrderStatus /></CustomerLayout>} />
-                <Route path="/profile" element={<CustomerLayout><Profile /></CustomerLayout>} />
-                <Route path="/login" element={<CustomerLayout><Login /></CustomerLayout>} />
+        <CartProvider>
+          <Router>
+            <Routes>
+              {/* 1. Customer Routes */}
+              <Route path="/" element={<CustomerLayout><Home /></CustomerLayout>} />
+              <Route path="/shop" element={<CustomerLayout><Shop /></CustomerLayout>} />
+              <Route path="/wholesale" element={<CustomerLayout><Wholesale /></CustomerLayout>} />
+              <Route path="/offers" element={<CustomerLayout><Offers /></CustomerLayout>} />
+              <Route path="/contact" element={<CustomerLayout><Contact /></CustomerLayout>} />
+              <Route path="/cart" element={<CustomerLayout><Cart /></CustomerLayout>} />
+              <Route path="/checkout" element={<CustomerLayout><Checkout /></CustomerLayout>} />
+              <Route path="/order-status/:id" element={<CustomerLayout><OrderStatus /></CustomerLayout>} />
 
-                {/* 2. Admin Portal Routes */}
-                <Route
-                  path="/admin"
-                  element={
-                    <AdminProtectedRoute>
-                      <AdminLayout />
-                    </AdminProtectedRoute>
-                  }
-                >
-                  <Route index element={<Dashboard />} />
-                  <Route path="daily-prices" element={<AdminDailyPrices />} />
-                  <Route path="products" element={<AdminProducts />} />
-                  <Route path="categories" element={<AdminCategories />} />
-                  <Route path="inventory" element={<AdminInventory />} />
-                  <Route path="orders" element={<AdminOrders />} />
-                  <Route path="settings" element={<AdminSettings />} />
-                  <Route path="wholesale" element={<AdminWholesale />} />
-                  <Route path="staff" element={<AdminStaff />} />
-                  <Route path="coupons" element={<AdminCoupons />} />
-                  <Route path="reviews" element={<AdminReviews />} />
-                  <Route path="banners" element={<AdminBanners />} />
-                  <Route path="audit-logs" element={<AdminAuditLogs />} />
-                </Route>
+              {/* 2. Admin Portal Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="daily-prices" element={<AdminDailyPrices />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="categories" element={<AdminCategories />} />
+                <Route path="inventory" element={<AdminInventory />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="settings" element={<AdminSettings />} />
+                <Route path="wholesale" element={<AdminWholesale />} />
+                <Route path="staff" element={<AdminStaff />} />
+                <Route path="coupons" element={<AdminCoupons />} />
+                <Route path="reviews" element={<AdminReviews />} />
+                <Route path="banners" element={<AdminBanners />} />
+                <Route path="audit-logs" element={<AdminAuditLogs />} />
+              </Route>
 
-                {/* Redirect invalid routes */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-
-              </Routes>
-            </Router>
-          </CartProvider>
-        </AuthProvider>
+              {/* Redirect invalid routes */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Router>
+        </CartProvider>
       </SettingsProvider>
     </ThemeProvider>
   );

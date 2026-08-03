@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
@@ -8,22 +8,15 @@ import Logo from './Logo';
 import { FiShoppingCart, FiSun, FiMoon, FiMenu, FiX, FiUser, FiLogOut, FiLayout } from 'react-icons/fi';
 
 const Navbar = () => {
-  const { user, logout, hasRole } = useAuth();
+  // auth removed
   const { cartItems } = useCart();
   const { theme, toggleTheme } = useTheme();
   const { settings } = useSettings();
   const navigate = useNavigate();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    setDropdownOpen(false);
-  };
 
   const navLinks = [
     { name: 'Shop', path: '/shop' },
@@ -85,62 +78,7 @@ const Navbar = () => {
             </Link>
 
             {/* User Login / Profile Dropdown */}
-            {user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-1.5 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none"
-                >
-                  <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 flex items-center justify-center font-bold">
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 hidden lg:inline max-w-[100px] truncate">
-                    {user.name}
-                  </span>
-                </button>
 
-                {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-800 rounded-lg shadow-xl py-2 border border-slate-200 dark:border-slate-700 z-50">
-                    <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
-                      <p className="text-xs text-slate-400">Signed in as</p>
-                      <p className="text-sm font-bold truncate text-slate-800 dark:text-slate-200">{user.mobile}</p>
-                    </div>
-
-                    {hasRole(['admin', 'manager', 'sales', 'inventory']) && (
-                      <Link
-                        to="/admin"
-                        onClick={() => setDropdownOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                      >
-                        <FiLayout className="h-4 w-4" /> Admin Dashboard
-                      </Link>
-                    )}
-
-                    <Link
-                      to="/profile"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                    >
-                      <FiUser className="h-4 w-4" /> My Profile
-                    </Link>
-
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-                    >
-                      <FiLogOut className="h-4 w-4" /> Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="bg-primary-700 hover:bg-primary-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all duration-150"
-              >
-                Sign In
-              </Link>
-            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -187,40 +125,6 @@ const Navbar = () => {
               {link.name}
             </Link>
           ))}
-          {user ? (
-            <>
-              {hasRole(['admin', 'manager', 'sales', 'inventory']) && (
-                <Link
-                  to="/admin"
-                  onClick={() => setIsOpen(false)}
-                  className="block px-3 py-2 rounded-md text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  Admin Dashboard
-                </Link>
-              )}
-              <Link
-                to="/profile"
-                onClick={() => setIsOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                My Profile
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="w-full text-left block px-3 py-2 rounded-md text-base font-semibold text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <Link
-              to="/login"
-              onClick={() => setIsOpen(false)}
-              className="block text-center bg-primary-700 hover:bg-primary-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold"
-            >
-              Sign In
-            </Link>
-          )}
         </div>
       )}
     </nav>

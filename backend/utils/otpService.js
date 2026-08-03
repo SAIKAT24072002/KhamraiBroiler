@@ -44,7 +44,7 @@ const sendOTP = async (mobile) => {
   });
 
   // Production vs. Mock setup
-  const useMock = process.env.USE_MOCK_OTP === 'true' || process.env.NODE_ENV !== 'production';
+  const useMock = process.env.USE_MOCK_OTP === 'true';
 
   if (useMock) {
     console.log(`[SMS MOCK] =======================================`);

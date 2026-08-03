@@ -73,13 +73,17 @@ const verifyOtpAndLogin = async (req, res, next) => {
       throw new Error('Invalid or expired Firebase token');
     }
 
-    // Normalize mobile: strip spaces, +91, 91 prefix for consistent DB lookup
-    const cleanMobile = mobile.replace(/\s+/g, '').replace(/^\+?91/, '');
+    // Normalize mobile: strip spaces and leading '+' for consistent DB lookup
+    const cleanMobile = mobile.replace(/\s+/g, '').replace(/^\+/, '');
 
-    // Check if user already exists (try both raw and cleaned forms)
+    // Check if user already exists using the normalized mobile number
     let user = await User.findOne({ mobile: cleanMobile });
     if (!user) {
-      user = await User.findOne({ mobile: mobile.replace(/\s+/g, '') });
+      // Fallback: try the raw mobile without spaces (in case it was stored with '+' prefix)
+      const rawMobile = mobile.replace(/\s+/g, '');
+      if (rawMobile !== cleanMobile) {
+        user = await User.findOne({ mobile: rawMobile });
+      }
     }
     let isNewUser = false;
 

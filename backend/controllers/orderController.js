@@ -477,8 +477,193 @@ const printInvoice = async (req, res, next) => {
   }
 };
 
+/**
+ * Guest checkout – create a pickup order without requiring authentication.
+ * Endpoint: POST /api/orders/guest
+ */
+const createGuestOrder = async (req, res, next) => {
+  try {
+    const {
+      name, phone, address,
+      items, couponCode,
+      paymentMethod, transactionId, pickupDate, pickupTime, orderNote
+    } = req.body;
+
+    // Basic guest info validation
+    if (!name || !phone || !address) {
+      res.status(400);
+      throw new Error('Name, phone number and address are required.');
+    }
+
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      res.status(400);
+      throw new Error('Phone number must be at least 10 digits.');
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      res.status(400);
+      throw new Error('Order items are required.');
+    }
+
+    if (!pickupDate || !pickupTime) {
+      res.status(400);
+      throw new Error('Pickup date and time slot are required.');
+    }
+
+    const settings = await Settings.findOne() || {};
+
+    let subtotal = 0;
+    const validatedItems = [];
+
+    // Verify stock and calculate subtotal (same logic as authenticated createOrder)
+    for (const cartItem of items) {
+      const product = await Product.findById(cartItem.productId);
+      if (!product) {
+        res.status(404);
+        throw new Error(`Product not found: ${cartItem.name || cartItem.productId}`);
+      }
+
+      if (product.status !== 'active') {
+        res.status(400);
+        throw new Error(`Product is no longer available: ${product.name}`);
+      }
+
+      if (product.stock < cartItem.quantity) {
+        res.status(400);
+        throw new Error(`Insufficient stock for ${product.name}. Available stock: ${product.stock} ${product.unit}.`);
+      }
+
+      let price = product.retailPrice;
+      const quantity = parseFloat(cartItem.quantity);
+
+      if (quantity >= product.minOrder) {
+        let tierPrice = null;
+        if (product.wholesaleTiers && product.wholesaleTiers.length > 0) {
+          for (const tier of product.wholesaleTiers) {
+            if (quantity >= tier.minQty && (!tier.maxQty || quantity <= tier.maxQty)) {
+              tierPrice = tier.price;
+              break;
+            }
+          }
+        }
+        price = tierPrice !== null ? tierPrice : product.wholesalePrice;
+      }
+
+      const totalItemAmount = price * quantity;
+      subtotal += totalItemAmount;
+
+      validatedItems.push({
+        product: product._id,
+        name: product.name,
+        quantity,
+        unit: product.unit,
+        price,
+        total: totalItemAmount
+      });
+    }
+
+    // Apply Coupon discount (if provided)
+    let discount = 0;
+    let coupon = null;
+    if (couponCode) {
+      coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), status: 'active' });
+      if (coupon) {
+        const now = new Date();
+        if (now >= coupon.startDate && now <= coupon.expiryDate && subtotal >= coupon.minOrderAmount) {
+          if (coupon.usageLimit <= 0 || coupon.usageCount < coupon.usageLimit) {
+            if (coupon.discountType === 'percentage') {
+              discount = (subtotal * coupon.discountValue) / 100;
+              if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
+                discount = coupon.maxDiscountAmount;
+              }
+            } else if (coupon.discountType === 'fixed') {
+              discount = coupon.discountValue;
+            }
+            if (discount > subtotal) discount = subtotal;
+          }
+        }
+      }
+    }
+
+    const total = Math.max(0, subtotal - discount);
+
+    // Deduct stock
+    for (const item of validatedItems) {
+      const prod = await Product.findById(item.product);
+      const previousStock = prod.stock;
+      prod.stock -= item.quantity;
+      await prod.save();
+
+      await InventoryTransaction.create({
+        product: item.product,
+        previousStock,
+        newStock: prod.stock,
+        quantityChanged: item.quantity,
+        type: 'OUT',
+        reason: 'Guest Order Checkout',
+        updatedBy: null
+      });
+    }
+
+    // Payment
+    let paymentStatus = 'Pending';
+    let pDetails = {};
+    const pMethod = paymentMethod || 'Cash on Pickup';
+
+    if (pMethod === 'Manual UPI') {
+      if (!transactionId) {
+        res.status(400);
+        throw new Error('Transaction UTR ID is required for UPI payment.');
+      }
+      paymentStatus = 'Pending Verification';
+      pDetails.transactionId = transactionId;
+    }
+
+    const orderNumber = generateOrderNumber();
+
+    const order = await Order.create({
+      orderNumber,
+      customer: null,
+      guestInfo: { name, phone: phoneDigits, address },
+      items: validatedItems,
+      subtotal,
+      discount,
+      loyaltyPointsEarned: 0,
+      loyaltyPointsRedeemed: 0,
+      total,
+      paymentMethod: pMethod,
+      paymentStatus,
+      paymentDetails: pDetails,
+      pickupDate: new Date(pickupDate),
+      pickupTime,
+      status: 'Pending',
+      orderNote: orderNote || ''
+    });
+
+    if (coupon) {
+      coupon.usageCount += 1;
+      await coupon.save();
+    }
+
+    // Audit
+    await AuditLog.create({
+      action: 'GUEST_ORDER_PLACED',
+      performedBy: null,
+      details: `Guest order ${order.orderNumber} placed by ${name} (${phoneDigits}) for ₹${order.total.toFixed(2)}`,
+      targetId: order._id,
+      targetModel: 'Order'
+    });
+
+    res.status(201).json(order);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createOrder,
+  createGuestOrder,
   getMyOrders,
   getOrderById,
   getAllOrders,

@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useSettings } from './SettingsContext';
-import { useAuth } from './AuthContext';
+
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const { settings } = useSettings();
-  const { user } = useAuth();
+
   
   const [cartItems, setCartItems] = useState(() => {
     const saved = localStorage.getItem('kbc_cart');
@@ -137,16 +137,8 @@ export const CartProvider = ({ children }) => {
   // Calculate final totals
   const couponDiscount = coupon ? coupon.discountAmount : 0;
   
-  let loyaltyPointsRedeemed = 0;
-  let loyaltyDiscount = 0;
-
-  if (useLoyaltyPoints && user && user.loyaltyPoints > 0 && settings) {
-    const pointsValRatio = settings.loyaltyPointsValue || 1;
-    const maxRedeemAmt = subtotal - couponDiscount;
-    const pointsNeeded = Math.min(user.loyaltyPoints, maxRedeemAmt / pointsValRatio);
-    loyaltyPointsRedeemed = Math.floor(pointsNeeded);
-    loyaltyDiscount = loyaltyPointsRedeemed * pointsValRatio;
-  }
+  const loyaltyPointsRedeemed = 0;
+  const loyaltyDiscount = 0;
 
   const discount = couponDiscount + loyaltyDiscount;
   const total = Math.max(0, subtotal - discount);
