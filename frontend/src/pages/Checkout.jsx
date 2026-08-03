@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
 import { submitGuestOrder } from '../utils/orderService';
 import api from '../utils/api';
 import { FiUser, FiPhone, FiMapPin, FiCalendar, FiClock, FiCheckCircle, FiArrowLeft, FiShoppingBag, FiCreditCard, FiSmartphone } from 'react-icons/fi';
@@ -11,6 +12,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { cartItems, subtotal, couponDiscount, coupon, total, clearCart } = useCart();
   const { settings } = useSettings();
+  const { user } = useAuth();
   const currency = settings?.currency || '₹';
 
   // Form fields
@@ -34,6 +36,30 @@ const Checkout = () => {
   const [showSandboxModal, setShowSandboxModal] = useState(false);
   const [simulatedPaymentData, setSimulatedPaymentData] = useState(null);
   const [createdOrderId, setCreatedOrderId] = useState(null);
+
+  // Auto-fill logged-in user data
+  React.useEffect(() => {
+    if (user) {
+      if (!name) setName(user.name || '');
+      if (!phone) setPhone(user.mobile || '');
+      
+      // Try to fetch previous address from last order
+      const fetchLatestOrder = async () => {
+        try {
+          const { data } = await api.get('/orders/my-orders');
+          if (data && data.length > 0 && data[0].guestInfo?.address) {
+            setAddress(data[0].guestInfo.address);
+          }
+        } catch (error) {
+          console.error('Failed to auto-fill address:', error);
+        }
+      };
+      
+      if (!address) {
+        fetchLatestOrder();
+      }
+    }
+  }, [user]);
 
   const timeSlots = [
     '8:00 AM – 9:00 AM',
@@ -68,7 +94,8 @@ const Checkout = () => {
 
     setLoading(true);
     try {
-      const order = await submitGuestOrder({
+      let order;
+      const orderPayload = {
         name: name.trim(),
         phone: digits,
         address: address.trim(),
@@ -79,7 +106,14 @@ const Checkout = () => {
         pickupDate,
         pickupTime,
         orderNote: orderNote.trim()
-      });
+      };
+
+      if (user) {
+        const res = await api.post('/orders', orderPayload);
+        order = res.data;
+      } else {
+        order = await submitGuestOrder(orderPayload);
+      }
 
       // Handle Razorpay Payment flow
       if (paymentMethod === 'Automatic Payment (Razorpay)') {

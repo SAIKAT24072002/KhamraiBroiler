@@ -10,95 +10,47 @@ const generateToken = (id) => {
 };
 
 /**
- * Sends a 6-digit OTP to the customer's mobile number.
- * Endpoint: POST /api/auth/send-otp
+ * Login or Register user using only 10-digit mobile number (No OTP).
+ * Endpoint: POST /api/auth/login
  */
-const requestOtp = async (req, res, next) => {
+const loginWithPhone = async (req, res, next) => {
   try {
     const { mobile } = req.body;
+    
     if (!mobile) {
       res.status(400);
       throw new Error('Mobile number is required.');
     }
 
-    // Basic mobile validation (e.g. +91XXXXXXXXXX or clean digits)
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(mobile)) {
+    // Clean and validate 10-digit mobile
+    const cleanMobile = mobile.replace(/\D/g, '');
+    if (cleanMobile.length !== 10) {
       res.status(400);
-      throw new Error('Invalid mobile number format. Please provide country code.');
+      throw new Error('Please enter a valid 10-digit mobile number.');
     }
 
-    const result = await otpService.sendOTP(mobile);
-    if (!result.success) {
-      res.status(400);
-      throw new Error(result.message);
-    }
-
-    res.status(200).json(result);
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Verifies OTP and logs in / registers the user.
- * Endpoint: POST /api/auth/verify-otp
- */
-const verifyOtpAndLogin = async (req, res, next) => {
-  try {
-    // We now receive idToken from Firebase along with user info
-    const { idToken, mobile, name, email } = req.body;
-    
-    if (!idToken || !mobile) {
-      res.status(400);
-      throw new Error('Firebase ID Token and mobile number are required.');
-    }
-
-    // Verify Firebase ID Token using Google Identity Toolkit REST API
-    const apiKey = process.env.VITE_FIREBASE_API_KEY;
-    if (!apiKey) {
-      res.status(500);
-      throw new Error('Server configuration error: Firebase API Key missing');
-    }
-
-    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken })
-    });
-
-    const data = await response.json();
-    if (data.error) {
-      res.status(400);
-      throw new Error('Invalid or expired Firebase token');
-    }
-
-    // Normalize mobile: strip spaces and leading '+' for consistent DB lookup
-    const cleanMobile = mobile.replace(/\s+/g, '').replace(/^\+/, '');
-
-    // Check if user already exists using the normalized mobile number
+    // Check if user already exists
     let user = await User.findOne({ mobile: cleanMobile });
-    if (!user) {
-      // Fallback: try the raw mobile without spaces (in case it was stored with '+' prefix)
-      const rawMobile = mobile.replace(/\s+/g, '');
-      if (rawMobile !== cleanMobile) {
-        user = await User.findOne({ mobile: rawMobile });
-      }
-    }
     let isNewUser = false;
 
     if (!user) {
       isNewUser = true;
-      // Register new user
+      // Register new user as customer
       user = await User.create({
         mobile: cleanMobile,
-        name: name || 'Customer',
-        email: email || '',
-        role: 'customer' // Defaults to customer
+        name: 'Customer',
+        email: '',
+        role: 'customer'
       });
+    } else {
+      // Check if active
+      if (user.status === 'inactive') {
+        res.status(403);
+        throw new Error('Your account is deactivated. Please contact support.');
+      }
     }
 
-    // Generate our backend JWT for consistent authorization
+    // Generate JWT token
     const token = generateToken(user._id);
 
     res.status(200).json({
@@ -208,8 +160,7 @@ const seedDefaultAdmin = async () => {
 };
 
 module.exports = {
-  requestOtp,
-  verifyOtpAndLogin,
+  loginWithPhone,
   getMe,
   updateMe,
   seedDefaultAdmin

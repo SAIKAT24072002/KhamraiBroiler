@@ -24,6 +24,7 @@ const generateOrderNumber = () => {
 const createOrder = async (req, res, next) => {
   try {
     const {
+      name, phone, address,
       items, couponCode, useLoyaltyPoints,
       paymentMethod, transactionId, pickupDate, pickupTime, orderNote
     } = req.body;
@@ -197,6 +198,7 @@ const createOrder = async (req, res, next) => {
     const order = await Order.create({
       orderNumber,
       customer: req.user._id,
+      guestInfo: { name, phone, address },
       items: validatedItems,
       subtotal,
       discount: discount - (loyaltyPointsRedeemed * (settings.loyaltyPointsValue || 1)),
@@ -245,8 +247,12 @@ const createOrder = async (req, res, next) => {
  */
 const getMyOrders = async (req, res, next) => {
   try {
-    const orders = await Order.find({ customer: req.user._id })
-      .sort({ createdAt: -1 });
+    const orders = await Order.find({
+      $or: [
+        { customer: req.user._id },
+        { 'guestInfo.phone': req.user.mobile }
+      ]
+    }).sort({ createdAt: -1 });
     res.status(200).json(orders);
   } catch (error) {
     next(error);
