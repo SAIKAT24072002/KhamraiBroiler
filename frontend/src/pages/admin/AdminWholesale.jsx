@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { FiClock, FiBriefcase, FiUser, FiPhone, FiCheckCircle, FiTrash2, FiMessageSquare } from 'react-icons/fi';
+import { FiClock, FiBriefcase, FiUser, FiPhone, FiCheckCircle, FiTrash2, FiMessageSquare, FiLoader } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { TableSkeleton } from '../../components/Skeleton';
+import { useSocket } from '../../context/SocketContext';
 
 const AdminWholesale = () => {
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const { socket } = useSocket();
 
   const loadEnquiries = async () => {
     try {
@@ -26,16 +29,46 @@ const AdminWholesale = () => {
     loadEnquiries();
   }, []);
 
+  // Real-time socket listener for new wholesale leads and updates
+  useEffect(() => {
+    if (socket) {
+      socket.emit('join_admin_room');
+      
+      const handleNewLead = () => {
+        try {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          audio.play().catch(e => console.log('Audio autoplay blocked', e));
+        } catch (e) {}
+        loadEnquiries();
+      };
+
+      const handleRealtimeUpdate = () => {
+        loadEnquiries();
+      };
+
+      socket.on('new_wholesale_lead', handleNewLead);
+      socket.on('admin_wholesale_updated', handleRealtimeUpdate);
+
+      return () => {
+        socket.off('new_wholesale_lead', handleNewLead);
+        socket.off('admin_wholesale_updated', handleRealtimeUpdate);
+      };
+    }
+  }, [socket]);
+
   const handleUpdateStatus = async (id, status) => {
     if (!window.confirm(`Are you sure you want to mark this enquiry as '${status}'?`)) return;
     setError('');
     setMessage('');
+    setActionLoading(id);
     try {
       await api.put(`/wholesale/${id}/status`, { status });
       setMessage(`Enquiry marked as '${status}' successfully.`);
-      loadEnquiries();
+      await loadEnquiries();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -108,9 +141,16 @@ const AdminWholesale = () => {
                       {enq.pickupTime && <p className="text-[10px] text-slate-450">{enq.pickupTime}</p>}
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`px-2 py-0.5 rounded font-black text-[9px] uppercase ${getStatusBadge(enq.status)}`}>
-                        {enq.status}
-                      </span>
+                      <div className="flex flex-col items-start gap-1">
+                        <span className={`px-2 py-0.5 rounded font-black text-[9px] uppercase ${getStatusBadge(enq.status)}`}>
+                          {enq.status}
+                        </span>
+                        {enq.status === 'Pending' && (
+                          <span className="bg-gradient-to-r from-red-600 to-amber-600 text-white font-black text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse flex items-center gap-1 shadow-sm mt-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping"></span> NEW LEAD
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex flex-col gap-2 items-center justify-center">
@@ -129,24 +169,27 @@ const AdminWholesale = () => {
                             <>
                               <button
                                 onClick={() => handleUpdateStatus(enq._id, 'Contacted')}
-                                className="bg-blue-100 hover:bg-blue-200 text-blue-800 py-1 px-2 rounded font-bold text-[9px]"
+                                disabled={actionLoading === enq._id}
+                                className="bg-blue-100 hover:bg-blue-200 disabled:opacity-50 text-blue-800 py-1 px-2.5 rounded-lg font-bold text-[9px] transition-all flex items-center gap-1"
                               >
-                                Contacted
+                                {actionLoading === enq._id ? <FiLoader className="animate-spin" /> : null} Contacted
                               </button>
                               <button
                                 onClick={() => handleUpdateStatus(enq._id, 'Approved')}
-                                className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-1 px-2 rounded font-bold text-[9px]"
+                                disabled={actionLoading === enq._id}
+                                className="bg-emerald-100 hover:bg-emerald-200 disabled:opacity-50 text-emerald-800 py-1 px-2.5 rounded-lg font-bold text-[9px] transition-all flex items-center gap-1"
                               >
-                                Approve
+                                {actionLoading === enq._id ? <FiLoader className="animate-spin" /> : null} Approve
                               </button>
                             </>
                           )}
                           {enq.status === 'Contacted' && (
                             <button
                               onClick={() => handleUpdateStatus(enq._id, 'Approved')}
-                              className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 py-1 px-2 rounded font-bold text-[9px]"
+                              disabled={actionLoading === enq._id}
+                              className="bg-emerald-100 hover:bg-emerald-200 disabled:opacity-50 text-emerald-800 py-1 px-2.5 rounded-lg font-bold text-[9px] transition-all flex items-center gap-1"
                             >
-                              Approve Bulk
+                              {actionLoading === enq._id ? <FiLoader className="animate-spin" /> : null} Approve Bulk
                             </button>
                           )}
                         </div>

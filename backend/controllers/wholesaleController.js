@@ -36,6 +36,17 @@ const submitEnquiry = async (req, res, next) => {
       `*Products:*%0A${itemsText}%0A%0A` +
       `*Note/Message:* ${message || 'None'}`;
 
+    // Emit real-time notification to Admin
+    const io = req.app.get('io');
+    if (io) {
+      io.to('admin_room').emit('new_wholesale_lead', {
+        enquiryId: enquiry._id,
+        businessName: enquiry.businessName,
+        contactPerson: enquiry.contactPerson,
+        createdAt: enquiry.createdAt
+      });
+    }
+
     res.status(201).json({
       success: true,
       enquiry,
@@ -89,6 +100,16 @@ const updateEnquiryStatus = async (req, res, next) => {
       targetId: enquiry._id,
       targetModel: 'WholesaleEnquiry'
     });
+
+    // Emit real-time update to Admin
+    const io = req.app.get('io');
+    if (io) {
+      io.to('admin_room').emit('admin_wholesale_updated', {
+        enquiryId: enquiry._id,
+        status: enquiry.status,
+        updatedAt: new Date()
+      });
+    }
 
     res.status(200).json(enquiry);
   } catch (error) {
