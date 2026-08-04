@@ -1,6 +1,15 @@
-let baseApiUrl = import.meta.env.VITE_API_URL || `${window.location.origin}/api`;
+let baseApiUrl = import.meta.env.VITE_API_URL;
+
+if (!baseApiUrl) {
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    baseApiUrl = `${window.location.origin}/api`;
+  } else {
+    baseApiUrl = 'http://localhost:5050/api';
+  }
+}
+
 // Dynamically replace localhost with the actual IP if accessed from a mobile phone on LAN
-if (baseApiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
+if (baseApiUrl.includes('localhost') && typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
   baseApiUrl = baseApiUrl.replace('localhost', window.location.hostname);
 }
 import axios from 'axios';
