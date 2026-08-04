@@ -27,6 +27,8 @@ const AdminSettings = () => {
   const [googleMapsUrl, setGoogleMapsUrl] = useState('');
   const [openingHours, setOpeningHours] = useState('');
   const [closingDay, setClosingDay] = useState('');
+  const [serviceAreaRadius, setServiceAreaRadius] = useState('');
+  const [serviceAreaText, setServiceAreaText] = useState('');
   
   // Payment Details
   const [upiId, setUpiId] = useState('');
@@ -53,6 +55,8 @@ const AdminSettings = () => {
       setGoogleMapsUrl(settings.googleMapsUrl || '');
       setOpeningHours(settings.openingHours || '');
       setClosingDay(settings.closingDay || '');
+      setServiceAreaRadius(settings.serviceAreaRadius || '');
+      setServiceAreaText(settings.serviceAreaText || '');
       setUpiId(settings.upiId || '');
       setUpiQrCodeUrl(settings.upiQrCodeUrl || '');
       setEnableRazorpay(!!settings.enableRazorpay);
@@ -94,8 +98,8 @@ const AdminSettings = () => {
     const payload = {
       businessName, tagline, description, logoUrl, faviconUrl,
       phone, whatsappNumber, email, storeAddress, googleMapsUrl,
-      openingHours, closingDay, upiId, upiQrCodeUrl,
-      enableRazorpay, enableManualUpi
+      openingHours, closingDay, serviceAreaRadius, serviceAreaText, 
+      upiId, upiQrCodeUrl, enableRazorpay, enableManualUpi
     };
 
     try {
@@ -233,6 +237,30 @@ const AdminSettings = () => {
                   value={googleMapsUrl}
                   onChange={(e) => setGoogleMapsUrl(e.target.value)}
                   className="block w-full px-3 py-2 border rounded-xl dark:bg-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Service Area Radius *</label>
+                <input
+                  type="text"
+                  required
+                  value={serviceAreaRadius}
+                  onChange={(e) => setServiceAreaRadius(e.target.value)}
+                  className="block w-full px-3 py-2 border rounded-xl dark:bg-slate-800"
+                  placeholder="e.g. 20 KM"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Service Area Text *</label>
+                <input
+                  type="text"
+                  required
+                  value={serviceAreaText}
+                  onChange={(e) => setServiceAreaText(e.target.value)}
+                  className="block w-full px-3 py-2 border rounded-xl dark:bg-slate-800"
+                  placeholder="Serving Customers Within Our Local Area"
                 />
               </div>
 

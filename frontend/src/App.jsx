@@ -6,6 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 
 // Customer layout components
 import Navbar from './components/Navbar';
@@ -80,41 +81,43 @@ function App() {
       <SettingsProvider>
         <CartProvider>
           <AuthProvider>
-            <Router>
-              <Routes>
-                {/* 1. Customer Routes */}
-                <Route path="/" element={<CustomerLayout><Home /></CustomerLayout>} />
-                <Route path="/shop" element={<CustomerLayout><Shop /></CustomerLayout>} />
-                <Route path="/wholesale" element={<CustomerLayout><Wholesale /></CustomerLayout>} />
-                <Route path="/offers" element={<CustomerLayout><Offers /></CustomerLayout>} />
-                <Route path="/contact" element={<CustomerLayout><Contact /></CustomerLayout>} />
-                <Route path="/cart" element={<CustomerLayout><Cart /></CustomerLayout>} />
-                <Route path="/checkout" element={<CustomerLayout><Checkout /></CustomerLayout>} />
-                <Route path="/order-status/:id" element={<CustomerLayout><OrderStatus /></CustomerLayout>} />
-                <Route path="/login" element={<CustomerLayout><Login /></CustomerLayout>} />
-                <Route path="/profile" element={<CustomerLayout><Profile /></CustomerLayout>} />
+            <SocketProvider>
+              <Router>
+                <Routes>
+                  {/* 1. Customer Routes */}
+                  <Route path="/" element={<CustomerLayout><Home /></CustomerLayout>} />
+                  <Route path="/shop" element={<CustomerLayout><Shop /></CustomerLayout>} />
+                  <Route path="/wholesale" element={<CustomerLayout><Wholesale /></CustomerLayout>} />
+                  <Route path="/offers" element={<CustomerLayout><Offers /></CustomerLayout>} />
+                  <Route path="/contact" element={<CustomerLayout><Contact /></CustomerLayout>} />
+                  <Route path="/cart" element={<CustomerLayout><Cart /></CustomerLayout>} />
+                  <Route path="/checkout" element={<CustomerLayout><Checkout /></CustomerLayout>} />
+                  <Route path="/order-status/:id" element={<CustomerLayout><OrderStatus /></CustomerLayout>} />
+                  <Route path="/login" element={<CustomerLayout><Login /></CustomerLayout>} />
+                  <Route path="/profile" element={<CustomerLayout><Profile /></CustomerLayout>} />
 
-                {/* 2. Admin Portal Routes */}
-                <Route path="/admin" element={<AdminProtectedRoute><AdminLayout /></AdminProtectedRoute>}>
-                <Route index element={<Dashboard />} />
-                <Route path="daily-prices" element={<AdminDailyPrices />} />
-                <Route path="products" element={<AdminProducts />} />
-                <Route path="categories" element={<AdminCategories />} />
-                <Route path="inventory" element={<AdminInventory />} />
-                <Route path="orders" element={<AdminOrders />} />
-                <Route path="settings" element={<AdminSettings />} />
-                <Route path="wholesale" element={<AdminWholesale />} />
-                <Route path="staff" element={<AdminStaff />} />
-                <Route path="coupons" element={<AdminCoupons />} />
-                <Route path="reviews" element={<AdminReviews />} />
-                <Route path="banners" element={<AdminBanners />} />
-                <Route path="audit-logs" element={<AdminAuditLogs />} />
-              </Route>
+                  {/* 2. Admin Portal Routes */}
+                  <Route path="/admin" element={<AdminProtectedRoute><AdminLayout /></AdminProtectedRoute>}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="daily-prices" element={<AdminDailyPrices />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="categories" element={<AdminCategories />} />
+                  <Route path="inventory" element={<AdminInventory />} />
+                  <Route path="orders" element={<AdminOrders />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                  <Route path="wholesale" element={<AdminWholesale />} />
+                  <Route path="staff" element={<AdminStaff />} />
+                  <Route path="coupons" element={<AdminCoupons />} />
+                  <Route path="reviews" element={<AdminReviews />} />
+                  <Route path="banners" element={<AdminBanners />} />
+                  <Route path="audit-logs" element={<AdminAuditLogs />} />
+                </Route>
 
-              {/* Redirect invalid routes */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-            </Router>
+                {/* Redirect invalid routes */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+              </Router>
+            </SocketProvider>
           </AuthProvider>
         </CartProvider>
       </SettingsProvider>

@@ -62,6 +62,14 @@ const SettingsSchema = new mongoose.Schema({
     type: String,
     default: 'Please show your Order ID at the counter to verify and pickup your fresh stock.'
   },
+  serviceAreaRadius: {
+    type: String,
+    default: '20 KM'
+  },
+  serviceAreaText: {
+    type: String,
+    default: 'Serving Customers Within Our Local Area'
+  },
   currency: {
     type: String,
     default: '₹'

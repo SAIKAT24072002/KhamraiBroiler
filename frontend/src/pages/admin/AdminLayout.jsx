@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useSocket } from '../../context/SocketContext';
 
 import { useSettings } from '../../context/SettingsContext';
 import {
@@ -12,6 +13,33 @@ import Logo from '../../components/Logo';
 const AdminLayout = () => {
   const { settings } = useSettings();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { socket } = useSocket();
+  const [notification, setNotification] = useState(null);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('new_order', (data) => {
+        // Play notification sound
+        try {
+          const audio = new Audio('/notification.mp3');
+          audio.play().catch(e => console.log('Audio play blocked by browser', e));
+        } catch(e) {}
+        
+        // Show visual notification
+        setNotification(`🔔 NEW ORDER: ${data.orderNumber} by ${data.customerName} (₹${data.total})`);
+        
+        setTimeout(() => {
+          setNotification(null);
+        }, 5000);
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off('new_order');
+      }
+    };
+  }, [socket]);
 
   const menuItems = [
     { name: 'Dashboard', path: '/admin', icon: <FiLayout /> },
@@ -30,7 +58,15 @@ const AdminLayout = () => {
   ];
 
   return (
-    <div className="h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-200 overflow-hidden">
+    <div className="h-screen bg-slate-50 dark:bg-slate-950 flex transition-colors duration-200 overflow-hidden relative">
+      
+      {/* Real-time Notification Toast */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 bg-primary-700 text-white px-6 py-4 rounded-xl shadow-2xl font-bold animate-bounce cursor-pointer flex items-center justify-between gap-4" onClick={() => setNotification(null)}>
+          <span>{notification}</span>
+          <FiX className="h-5 w-5 opacity-70 hover:opacity-100" />
+        </div>
+      )}
       
       {/* 1. Mobile Sidebar Hamburger overlay */}
       {sidebarOpen && (

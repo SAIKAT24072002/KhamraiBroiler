@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
 import { useSettings } from '../context/SettingsContext';
-import { FiPercent, FiGift, FiCopy, FiCheckCircle } from 'react-icons/fi';
+import { FiPercent, FiGift, FiCopy, FiCheckCircle, FiShoppingCart } from 'react-icons/fi';
 import { CardSkeleton } from '../components/Skeleton';
+import { useCart } from '../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 
 const Offers = () => {
   const { settings } = useSettings();
@@ -10,6 +12,9 @@ const Offers = () => {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState('');
+  const [applyingCode, setApplyingCode] = useState('');
+  const { applyCoupon } = useCart();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadOffersData = async () => {
@@ -34,6 +39,19 @@ const Offers = () => {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(''), 3000);
+  };
+
+  const handleApplyCoupon = async (code) => {
+    setApplyingCode(code);
+    try {
+      await applyCoupon(code);
+      navigate('/cart');
+    } catch (err) {
+      console.error(err.message);
+      alert(err.message);
+    } finally {
+      setApplyingCode('');
+    }
   };
 
   const currency = settings?.currency || '₹';
@@ -88,25 +106,34 @@ const Offers = () => {
                   </p>
                 </div>
 
-                {/* Promo Code tag Copy box */}
-                <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/80 mt-4">
+                {/* Promo Code tag Copy box & Apply Now */}
+                <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/80 mt-4 gap-2 flex-wrap">
                   <span className="font-mono text-sm font-bold text-slate-800 dark:text-white uppercase tracking-widest pl-2">
                     {c.code}
                   </span>
-                  <button
-                    onClick={() => handleCopyCode(c.code)}
-                    className="flex items-center gap-1 text-[10px] font-bold text-primary-700 hover:text-primary-800 dark:text-primary-400 uppercase tracking-wider bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-1.5 px-3 rounded-lg shadow-sm"
-                  >
-                    {copiedCode === c.code ? (
-                      <>
-                        <FiCheckCircle className="text-emerald-500" /> Copied
-                      </>
-                    ) : (
-                      <>
-                        <FiCopy /> Copy Code
-                      </>
-                    )}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleCopyCode(c.code)}
+                      className="flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white uppercase tracking-wider bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-1.5 px-3 rounded-lg shadow-sm transition-colors"
+                    >
+                      {copiedCode === c.code ? (
+                        <>
+                          <FiCheckCircle className="text-emerald-500" /> Copied
+                        </>
+                      ) : (
+                        <>
+                          <FiCopy /> Copy
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleApplyCoupon(c.code)}
+                      disabled={applyingCode === c.code}
+                      className="flex items-center gap-1 text-[10px] font-bold text-white uppercase tracking-wider bg-primary-700 hover:bg-primary-800 py-1.5 px-3 rounded-lg shadow-sm transition-colors disabled:opacity-70"
+                    >
+                      {applyingCode === c.code ? 'Applying...' : <><FiShoppingCart /> Apply Now</>}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

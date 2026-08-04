@@ -3,6 +3,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const connectDB = require('./config/db');
@@ -30,6 +32,37 @@ const adminRoutes = require('./routes/adminRoutes');
 
 // Initialize Express App
 const app = express();
+const httpServer = http.createServer(app);
+
+// Initialize Socket.io
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true
+  }
+});
+
+// Make io accessible in controllers
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.log(`Socket connected: ${socket.id}`);
+  
+  socket.on('join_admin_room', () => {
+    socket.join('admin_room');
+  });
+
+  socket.on('join_order_room', (orderId) => {
+    if (orderId) {
+      socket.join(`order_${orderId}`);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log(`Socket disconnected: ${socket.id}`);
+  });
+});
 
 // Connect to Isolated MongoDB Database
 connectDB().then(async () => {
@@ -114,7 +147,7 @@ const portfinder = require('portfinder');
     // Set env variables so frontend can read them via Vite
     process.env.PORT = freePort;
     process.env.BACKEND_PORT = freePort;
-    const server = app.listen(freePort, () => {
+    const server = httpServer.listen(freePort, () => {
       console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${freePort}`);
     });
     server.on('error', (err) => {

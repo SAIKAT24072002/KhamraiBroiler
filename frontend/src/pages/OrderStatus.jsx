@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api, { baseApiUrl } from '../utils/api';
 import { useSettings } from '../context/SettingsContext';
-import { FiCheckCircle, FiClock, FiFileText, FiMapPin, FiPrinter, FiUser } from 'react-icons/fi';
+import { FiCheckCircle, FiClock, FiFileText, FiMapPin, FiPrinter, FiUser, FiX } from 'react-icons/fi';
 import { TableSkeleton } from '../components/Skeleton';
+import { useSocket } from '../context/SocketContext';
 
 const OrderStatus = () => {
   const { id } = useParams();
@@ -12,6 +13,8 @@ const OrderStatus = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notification, setNotification] = useState(null);
+  const { socket } = useSocket();
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -27,6 +30,37 @@ const OrderStatus = () => {
     };
     fetchOrder();
   }, [id]);
+
+  useEffect(() => {
+    if (socket && order?._id) {
+      // Ask to join order room
+      socket.emit('join_order_room', order._id);
+
+      socket.on('order_status_updated', (data) => {
+        // Play notification sound
+        try {
+          const audio = new Audio('/notification.mp3');
+          audio.play().catch(e => console.log('Audio play blocked by browser', e));
+        } catch(e) {}
+        
+        // Show visual notification
+        setNotification(`🔔 ORDER STATUS UPDATED: ${data.status}`);
+        
+        // Update local state
+        setOrder(prev => ({ ...prev, status: data.status }));
+        
+        setTimeout(() => {
+          setNotification(null);
+        }, 5000);
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off('order_status_updated');
+      }
+    };
+  }, [socket, order?._id]);
 
   const currency = settings?.currency || '₹';
 
@@ -72,8 +106,16 @@ const OrderStatus = () => {
   const isCancelled = order.status === 'Cancelled';
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 dark:bg-slate-950 transition-colors duration-200">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 dark:bg-slate-950 transition-colors duration-200 relative">
       
+      {/* Real-time Notification Toast */}
+      {notification && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-primary-700 text-white px-6 py-4 rounded-xl shadow-2xl font-bold animate-bounce cursor-pointer flex items-center justify-between gap-4" onClick={() => setNotification(null)}>
+          <span>{notification}</span>
+          <FiX className="h-5 w-5 opacity-70 hover:opacity-100" />
+        </div>
+      )}
+
       {/* Header details */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-6 rounded-3xl shadow-sm">
         <div className="space-y-1">

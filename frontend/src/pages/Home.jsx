@@ -19,22 +19,25 @@ const Home = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [activeOffers, setActiveOffers] = useState([]);
 
   useEffect(() => {
     const loadHomeData = async () => {
       try {
         setLoading(true);
-        const [bannerRes, categoryRes, productRes, reviewRes] = await Promise.all([
+        const [bannerRes, categoryRes, productRes, reviewRes, offerRes] = await Promise.all([
           api.get('/banners'),
           api.get('/categories'),
           api.get('/products?isFeatured=true'),
-          api.get('/reviews')
+          api.get('/reviews'),
+          api.get('/offers')
         ]);
         
         setBanners(bannerRes.data.filter(b => b.status === 'active'));
         setCategories(categoryRes.data.filter(c => c.status === 'active'));
         setFeaturedProducts(productRes.data.filter(p => p.status === 'active').slice(0, 4));
         setReviews(reviewRes.data.filter(r => r.status === 'Approved').slice(0, 3));
+        setActiveOffers(offerRes.data.filter(o => o.status === 'active'));
       } catch (err) {
         console.error('Failed to load homepage components:', err.message);
       } finally {
@@ -59,6 +62,17 @@ const Home = () => {
   return (
     <div className="space-y-16 pb-16 dark:bg-slate-950 transition-colors duration-200">
       
+      {/* Live Offer Notification Banner */}
+      {!loading && activeOffers.length > 0 && (
+        <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-center py-2 px-4 shadow-md relative z-10 flex flex-col md:flex-row items-center justify-center gap-2">
+          <span className="bg-white text-amber-600 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider animate-pulse">LIVE</span>
+          <p className="text-xs font-bold">
+            {activeOffers[0].title} - <span className="font-normal">{activeOffers[0].discountPercentage}% OFF!</span>
+          </p>
+          <Link to="/offers" className="text-[10px] underline hover:text-amber-100 font-bold ml-2">View Offers</Link>
+        </div>
+      )}
+
       {/* 1. Hero Slide Carousel */}
       {loading ? (
         <BannerSkeleton />
@@ -141,6 +155,16 @@ const Home = () => {
               <p className="text-lg text-slate-300">
                 {tagline}
               </p>
+              
+              <div className="bg-primary-900/50 border border-primary-500/30 rounded-xl p-4 inline-block">
+                <p className="text-sm font-bold text-primary-300 flex items-center gap-2">
+                  <FiTruck /> No Home Delivery - Store Pickup Only
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {settings?.serviceAreaText || 'Serving Customers Within Our Local Area'} • {settings?.serviceAreaRadius || '20 KM'} Radius
+                </p>
+              </div>
+
               <div className="flex flex-wrap gap-4">
                 <Link to="/shop" className="bg-primary-700 hover:bg-primary-800 text-white py-3.5 px-6 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 hover:scale-105 active:scale-95 transition-all">
                   Shop Fresh Stock <FiShoppingBag />
@@ -370,6 +394,9 @@ const Home = () => {
               <h3 className="text-xl font-bold text-slate-800 dark:text-white uppercase">Khamrai Broiler Center</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                 {settings?.storeAddress || 'Station Road, Khamrai Market, Midnapore, West Bengal, India'}
+              </p>
+              <p className="text-xs font-bold text-primary-600 dark:text-primary-400 mt-2">
+                Service Area: {settings?.serviceAreaRadius || '20 KM'}
               </p>
             </div>
 

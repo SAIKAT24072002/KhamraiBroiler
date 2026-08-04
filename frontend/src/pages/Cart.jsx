@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
-import { useSettings } from '../context/SettingsContext';
-import { FiTrash2, FiPlus, FiMinus, FiArrowRight, FiPercent } from 'react-icons/fi';
+import { FiTrash2, FiPlus, FiMinus, FiArrowRight, FiPercent, FiGift } from 'react-icons/fi';
+import api from '../utils/api';
+import { useEffect } from 'react';
 
 const Cart = () => {
   const {
@@ -19,6 +20,19 @@ const Cart = () => {
 
   const [couponCode, setCouponCode] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  const [activeCoupons, setActiveCoupons] = useState([]);
+
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        const res = await api.get('/coupons');
+        setActiveCoupons(res.data.filter(c => c.status === 'active'));
+      } catch (err) {
+        console.error('Failed to load active coupons:', err.message);
+      }
+    };
+    fetchCoupons();
+  }, []);
 
   const handleApplyCoupon = async (e) => {
     e.preventDefault();
@@ -208,6 +222,28 @@ const Cart = () => {
                 </form>
               )}
               {couponError && <p className="text-[10px] text-red-500 font-bold">{couponError}</p>}
+              
+              {/* Show available active coupons */}
+              {!coupon && activeCoupons.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    <FiGift /> Available Offers
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {activeCoupons.map(c => (
+                      <div key={c._id} className="bg-primary-50 dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/40 p-2.5 rounded-xl flex items-center justify-between group cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-900/60 transition-colors" onClick={() => setCouponCode(c.code)}>
+                        <div>
+                          <span className="text-[10px] font-bold text-primary-700 dark:text-primary-300 uppercase tracking-widest">{c.code}</span>
+                          <p className="text-[9px] text-primary-600/80 mt-0.5">Min Order: {currency}{c.minOrderAmount}</p>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); setCouponCode(c.code); }} className="text-[10px] font-bold text-primary-700 bg-white dark:bg-slate-900 border border-primary-200 dark:border-primary-800 px-2 py-1 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                          USE
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
 
