@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
+import { useSettings } from '../context/SettingsContext';
 import { FiTrash2, FiPlus, FiMinus, FiArrowRight, FiPercent, FiGift } from 'react-icons/fi';
 import api from '../utils/api';
 import { useEffect } from 'react';
