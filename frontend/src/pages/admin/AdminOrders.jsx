@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api, { baseApiUrl } from '../../utils/api';
 import { useSettings } from '../../context/SettingsContext';
-import { FiCheckCircle, FiClock, FiShoppingBag, FiUser, FiPrinter, FiXCircle, FiCheck, FiDollarSign, FiSearch } from 'react-icons/fi';
+import { FiCheckCircle, FiClock, FiShoppingBag, FiUser, FiPrinter, FiXCircle, FiCheck, FiDollarSign, FiSearch, FiLoader } from 'react-icons/fi';
 import { TableSkeleton } from '../../components/Skeleton';
+import { useSocket } from '../../context/SocketContext';
 
 const AdminOrders = () => {
   const { settings } = useSettings();
@@ -13,9 +14,11 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [actionLoading, setActionLoading] = useState(null);
   
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const { socket } = useSocket();
 
   const loadOrders = async () => {
     try {
@@ -33,6 +36,25 @@ const AdminOrders = () => {
     loadOrders();
   }, [statusFilter]);
 
+  // Real-time socket listener for new orders and status updates
+  useEffect(() => {
+    if (socket) {
+      socket.emit('join_admin_room');
+      
+      const handleRealtimeUpdate = () => {
+        loadOrders();
+      };
+
+      socket.on('new_order', handleRealtimeUpdate);
+      socket.on('admin_order_updated', handleRealtimeUpdate);
+
+      return () => {
+        socket.off('new_order', handleRealtimeUpdate);
+        socket.off('admin_order_updated', handleRealtimeUpdate);
+      };
+    }
+  }, [socket]);
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     loadOrders();
@@ -42,12 +64,15 @@ const AdminOrders = () => {
     if (!window.confirm(`Are you sure you want to change order status to '${status}'?`)) return;
     setError('');
     setMessage('');
+    setActionLoading(id);
     try {
       await api.put(`/orders/${id}/status`, { status });
       setMessage(`Order status updated to '${status}' successfully.`);
-      loadOrders();
+      await loadOrders();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -55,12 +80,15 @@ const AdminOrders = () => {
     if (!window.confirm(`Are you sure you want to mark this order payment as '${paymentStatus}'?`)) return;
     setError('');
     setMessage('');
+    setActionLoading(id);
     try {
       await api.put(`/orders/${id}/payment`, { paymentStatus });
       setMessage(`Payment marked as '${paymentStatus}' successfully.`);
-      loadOrders();
+      await loadOrders();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -169,8 +197,8 @@ const AdminOrders = () => {
                 </div>
 
                 <div className="text-[10px] text-slate-500 space-y-1">
-                  <p className="flex items-center gap-1"><FiUser /> <strong>Name:</strong> {ord.customer?.name}</p>
-                  <p className="flex items-center gap-1"><FiClock /> <strong>Mobile:</strong> {ord.customer?.mobile}</p>
+                  <p className="flex items-center gap-1"><FiUser /> <strong>Name:</strong> {ord.customer?.name || ord.guestInfo?.name || 'Customer'}</p>
+                  <p className="flex items-center gap-1"><FiClock /> <strong>Mobile:</strong> {ord.customer?.mobile || ord.guestInfo?.phone || 'N/A'}</p>
                 </div>
               </div>
 
@@ -217,45 +245,50 @@ const AdminOrders = () => {
                   {ord.paymentStatus !== 'Paid' && (
                     <button
                       onClick={() => handleUpdatePaymentStatus(ord._id, 'Paid')}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-lg text-[9px] uppercase flex items-center justify-center gap-1"
+                      disabled={actionLoading === ord._id}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-2 rounded-lg text-[10px] uppercase flex items-center justify-center gap-1 transition-all shadow-sm"
                     >
-                      <FiDollarSign /> Confirm Payment
+                      {actionLoading === ord._id ? <FiLoader className="animate-spin" /> : <FiDollarSign />} CONFIRM PAYMENT
                     </button>
                   )}
                 </div>
 
                 {/* 2. Order status transitions buttons */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {ord.status === 'Pending' && (
                     <button
                       onClick={() => handleUpdateStatus(ord._id, 'Confirmed')}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-sm"
+                      disabled={actionLoading === ord._id}
+                      className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-sm flex items-center justify-center gap-1 transition-all"
                     >
-                      Confirm Order
+                      {actionLoading === ord._id ? <FiLoader className="animate-spin" /> : <FiCheck />} CONFIRM ORDER
                     </button>
                   )}
                   {ord.status === 'Confirmed' && (
                     <button
                       onClick={() => handleUpdateStatus(ord._id, 'Preparing')}
-                      className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-sm"
+                      disabled={actionLoading === ord._id}
+                      className="w-full bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-sm flex items-center justify-center gap-1 transition-all"
                     >
-                      Start Preparing
+                      {actionLoading === ord._id ? <FiLoader className="animate-spin" /> : <FiClock />} START PREPARING
                     </button>
                   )}
                   {ord.status === 'Preparing' && (
                     <button
                       onClick={() => handleUpdateStatus(ord._id, 'Ready for Pickup')}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-sm animate-pulse"
+                      disabled={actionLoading === ord._id}
+                      className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-sm animate-pulse flex items-center justify-center gap-1 transition-all"
                     >
-                      Mark Ready for Pickup
+                      {actionLoading === ord._id ? <FiLoader className="animate-spin" /> : <FiShoppingBag />} MARK READY FOR PICKUP
                     </button>
                   )}
                   {ord.status === 'Ready for Pickup' && (
                     <button
                       onClick={() => handleUpdateStatus(ord._id, 'Completed')}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-md"
+                      disabled={actionLoading === ord._id}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-2 rounded-lg text-[10px] uppercase shadow-md flex items-center justify-center gap-1 transition-all"
                     >
-                      Mark Collected & Complete
+                      {actionLoading === ord._id ? <FiLoader className="animate-spin" /> : <FiCheckCircle />} MARK COLLECTED & COMPLETE
                     </button>
                   )}
 
@@ -263,9 +296,10 @@ const AdminOrders = () => {
                   {ord.status !== 'Completed' && ord.status !== 'Collected' && ord.status !== 'Cancelled' && (
                     <button
                       onClick={() => handleUpdateStatus(ord._id, 'Cancelled')}
-                      className="w-full text-slate-400 hover:text-red-500 font-bold py-1.5 rounded-lg text-[9px] uppercase tracking-wider text-center"
+                      disabled={actionLoading === ord._id}
+                      className="w-full text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 border border-red-200 dark:border-red-900/40 font-bold py-1.5 rounded-lg text-[9px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
                     >
-                      Cancel Order
+                      {actionLoading === ord._id ? <FiLoader className="animate-spin" /> : <FiXCircle />} CANCEL ORDER
                     </button>
                   )}
                   

@@ -417,13 +417,21 @@ const updateOrderStatus = async (req, res, next) => {
       targetModel: 'Order'
     });
 
-    // Emit real-time notification to Customer
+    // Emit real-time notification to Customer & Admin
     const io = req.app.get('io');
     if (io) {
       io.to(`order_${order._id}`).emit('order_status_updated', {
         orderId: order._id,
         orderNumber: order.orderNumber,
         status: order.status,
+        paymentStatus: order.paymentStatus,
+        updatedAt: new Date()
+      });
+      io.to('admin_room').emit('admin_order_updated', {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
         updatedAt: new Date()
       });
     }
@@ -463,6 +471,25 @@ const updatePaymentStatus = async (req, res, next) => {
       targetId: order._id,
       targetModel: 'Order'
     });
+
+    // Emit real-time notification to Customer & Admin
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`order_${order._id}`).emit('order_status_updated', {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        updatedAt: new Date()
+      });
+      io.to('admin_room').emit('admin_order_updated', {
+        orderId: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        updatedAt: new Date()
+      });
+    }
 
     res.status(200).json(order);
   } catch (error) {

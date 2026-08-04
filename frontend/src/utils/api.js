@@ -2,7 +2,7 @@ let baseApiUrl = import.meta.env.VITE_API_URL;
 
 if (!baseApiUrl) {
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    baseApiUrl = `${window.location.origin}/api`;
+    baseApiUrl = 'https://khamraibroilercenter.onrender.com/api';
   } else {
     baseApiUrl = 'http://localhost:5050/api';
   }
