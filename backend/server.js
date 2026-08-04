@@ -32,6 +32,7 @@ const adminRoutes = require('./routes/adminRoutes');
 
 // Initialize Express App
 const app = express();
+app.set('trust proxy', 1); // Trust first reverse proxy (Render/Vercel) to read true client IP from X-Forwarded-For
 const httpServer = http.createServer(app);
 
 // Initialize Socket.io

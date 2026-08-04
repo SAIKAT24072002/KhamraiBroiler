@@ -8,7 +8,10 @@ const AuditLog = require('../models/AuditLog');
 const getCoupons = async (req, res, next) => {
   try {
     const isAdminMode = req.query.adminMode === 'true';
-    const filter = isAdminMode ? {} : { status: 'active', expiryDate: { $gt: new Date() } };
+    const now = new Date();
+    // Start of today so coupons expiring today remain visible throughout the day
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const filter = isAdminMode ? {} : { status: 'active', expiryDate: { $gte: startOfToday } };
     const coupons = await Coupon.find(filter).sort({ createdAt: -1 });
     res.status(200).json(coupons);
   } catch (error) {
@@ -93,14 +96,20 @@ const createCoupon = async (req, res, next) => {
       throw new Error('Coupon code already exists.');
     }
 
+    // Ensure expiryDate is set to end of day (23:59:59.999) if YYYY-MM-DD format
+    let parsedExpiry = new Date(expiryDate);
+    if (typeof expiryDate === 'string' && expiryDate.length <= 10) {
+      parsedExpiry = new Date(`${expiryDate}T23:59:59.999Z`);
+    }
+
     const coupon = await Coupon.create({
       code: code.toUpperCase(),
       discountType,
       discountValue,
       minOrderAmount: minOrderAmount || 0,
       maxDiscountAmount,
-      startDate: startDate || new Date(),
-      expiryDate: new Date(expiryDate),
+      startDate: startDate ? new Date(startDate) : new Date(),
+      expiryDate: parsedExpiry,
       usageLimit: usageLimit || 0,
       status: status || 'active'
     });
@@ -138,7 +147,13 @@ const updateCoupon = async (req, res, next) => {
     if (minOrderAmount !== undefined) coupon.minOrderAmount = minOrderAmount;
     if (maxDiscountAmount !== undefined) coupon.maxDiscountAmount = maxDiscountAmount;
     if (startDate) coupon.startDate = new Date(startDate);
-    if (expiryDate) coupon.expiryDate = new Date(expiryDate);
+    if (expiryDate) {
+      let parsedExpiry = new Date(expiryDate);
+      if (typeof expiryDate === 'string' && expiryDate.length <= 10) {
+        parsedExpiry = new Date(`${expiryDate}T23:59:59.999Z`);
+      }
+      coupon.expiryDate = parsedExpiry;
+    }
     if (usageLimit !== undefined) coupon.usageLimit = usageLimit;
     if (status) coupon.status = status;
 
