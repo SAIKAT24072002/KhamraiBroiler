@@ -41,15 +41,23 @@ const AdminOrders = () => {
     if (socket) {
       socket.emit('join_admin_room');
       
+      const handleNewOrder = () => {
+        try {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+          audio.play().catch(e => console.log('Autoplay audio blocked', e));
+        } catch (e) {}
+        loadOrders();
+      };
+
       const handleRealtimeUpdate = () => {
         loadOrders();
       };
 
-      socket.on('new_order', handleRealtimeUpdate);
+      socket.on('new_order', handleNewOrder);
       socket.on('admin_order_updated', handleRealtimeUpdate);
 
       return () => {
-        socket.off('new_order', handleRealtimeUpdate);
+        socket.off('new_order', handleNewOrder);
         socket.off('admin_order_updated', handleRealtimeUpdate);
       };
     }
@@ -184,14 +192,28 @@ const AdminOrders = () => {
       ) : orders.length > 0 ? (
         <div className="space-y-6">
           {orders.map((ord) => (
-            <div key={ord._id} className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 shadow-sm grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+            <div
+              key={ord._id}
+              className={`bg-white dark:bg-slate-900 border rounded-3xl p-6 shadow-sm grid grid-cols-1 lg:grid-cols-4 gap-6 items-start transition-all ${
+                ord.status === 'Pending'
+                  ? 'border-l-4 border-l-amber-500 border-amber-200/80 dark:border-amber-900/40 bg-amber-50/20 dark:bg-amber-950/10'
+                  : 'border-slate-200/80 dark:border-slate-800'
+              }`}
+            >
               
               {/* Col 1: Order Meta */}
               <div className="space-y-3">
-                <div className="space-y-0.5">
-                  <span className={`px-2 py-0.5 rounded font-black text-[9px] uppercase tracking-wide ${getStatusBadge(ord.status)}`}>
-                    {ord.status}
-                  </span>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded font-black text-[9px] uppercase tracking-wide ${getStatusBadge(ord.status)}`}>
+                      {ord.status}
+                    </span>
+                    {ord.status === 'Pending' && (
+                      <span className="bg-red-600 text-white font-black text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider animate-pulse flex items-center gap-1 shadow-sm">
+                        <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping"></span> NEW ORDER
+                      </span>
+                    )}
+                  </div>
                   <h3 className="font-mono text-sm font-bold text-slate-800 dark:text-white select-all mt-1">{ord.orderNumber}</h3>
                   <p className="text-[10px] text-slate-400">{formatDate(ord.createdAt)}</p>
                 </div>

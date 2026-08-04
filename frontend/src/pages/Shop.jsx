@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
@@ -10,6 +10,7 @@ import ProductDetailsModal from '../components/ProductDetailsModal';
 const Shop = () => {
   const { addToCart } = useCart();
   const { settings } = useSettings();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryFilter = searchParams.get('category') || '';
 
@@ -152,8 +153,8 @@ const Shop = () => {
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-4 border-t border-slate-50 dark:border-slate-800 mt-4">
-                <div>
+              <div className="flex flex-col gap-2 pt-4 border-t border-slate-50 dark:border-slate-800 mt-4">
+                <div className="flex justify-between items-center mb-1">
                   <span className="text-lg font-extrabold text-primary-700 dark:text-primary-400">
                     {currency}{p.retailPrice}
                   </span>
@@ -163,13 +164,25 @@ const Shop = () => {
                   )}
                 </div>
 
-                <button
-                  disabled={p.stock <= 0}
-                  onClick={() => addToCart(p, 1)}
-                  className="bg-primary-700 hover:bg-primary-800 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-md disabled:cursor-not-allowed transition-colors"
-                >
-                  {p.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    disabled={p.stock <= 0}
+                    onClick={() => addToCart(p, 1)}
+                    className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-50 text-slate-800 dark:text-white text-[11px] font-bold py-2 px-2 rounded-xl shadow-sm disabled:cursor-not-allowed transition-colors text-center uppercase tracking-wider"
+                  >
+                    {p.stock > 0 ? '+ Add' : 'Out'}
+                  </button>
+                  <button
+                    disabled={p.stock <= 0}
+                    onClick={() => {
+                      addToCart(p, 1);
+                      navigate('/checkout');
+                    }}
+                    className="bg-primary-700 hover:bg-primary-800 disabled:opacity-50 text-white text-[11px] font-bold py-2 px-2 rounded-xl shadow-md disabled:cursor-not-allowed transition-colors text-center uppercase tracking-wider"
+                  >
+                    Shop Now
+                  </button>
+                </div>
               </div>
             </div>
           ))}
